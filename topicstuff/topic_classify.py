@@ -2,7 +2,7 @@
 import json
 import mechanize
 import re
-
+import cookielib
 
 def get_topics_and_words(topics):
     br = mechanize.Browser()
@@ -12,7 +12,8 @@ def get_topics_and_words(topics):
     br.set_handle_gzip(True)
     br.set_debug_http(True)
     br.set_debug_redirects(True)
-   
+    cj = cookielib.LWPCookieJar()
+    br.set_cookiejar(cj)
     data = {"topic": {}, "all_words": {}}
     # initialize "all_words": {"count": 0}
     data["all_words"]["count"] = 0
@@ -24,10 +25,11 @@ def get_topics_and_words(topics):
     for topic in topics:
         data["topic"][topic] = {"words": {}, "documents": [], "total_words": 0}
         seq = re.compile(r'[A-Za-z ]+[A-Za-z, ]+')
-        api = 'http://www.jstor.org/action/doBasicSearch?Query={0}&Search=Search&gw=jtx&prq=topic+identifier&hp=10&acc=off&aori=off&wc=on&fc=off'
+        api = 'http://www.jstor.org/action/doBasicSearch?Query={0}&Search=Search&gw=jtx&prq=topic+identifier&hp=50&acc=off&aori=off&wc=on&fc=off'
         br.open(api.format(topic))
         with_info = [i for i in br.links() if 'http://www.jstor.org/stable' in i.absolute_url]
         for link in with_info:
+        
             br.follow_link(link)
             resp = br.response().read()
             if 'An abstract for this item is not available' not in resp:
@@ -61,6 +63,7 @@ def get_topics_and_words(topics):
                                 data["topic"][topic]["words"][word]["number"] = 1
             else:
                 pass
+        
     return data
 
 
