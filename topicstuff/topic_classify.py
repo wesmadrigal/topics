@@ -10,22 +10,26 @@ def get_topics_and_words(topics):
     br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
     br.set_handle_equiv(True)
     br.set_handle_gzip(True)
+    br.set_handle_redirect(True)
     br.set_debug_http(True)
     br.set_debug_redirects(True)
     cj = cookielib.LWPCookieJar()
     br.set_cookiejar(cj)
-    data = {"topic": {}, "all_words": {}}
+    all_struct = {"all_words": {}}
+    #data = {"topic": {}, "all_words": {}}
     # initialize "all_words": {"count": 0}
-    data["all_words"]["count"] = 0
+    all_struct["all_words"]["count"] = 0
     # iteratively add words to this along the way and count
     # them each time they are encountered once again
-    data["all_words"]["words"] = {}
+    all_struct["all_words"]["words"] = {}
     # use the words in here when calculating to find out the amount of times they have
     # appeared in the document vs how many times they appeared in total
     for topic in topics:
-        data["topic"][topic] = {"words": {}, "documents": [], "total_words": 0}
+        #data["topic"][topic] = {"words": {}, "documents": [], "total_words": 0}
+        topic_struct = {"words": {}, "documents": [], "total_words": 0}
+        #new_data = {"words": {}, "documents": [], "total_words": 0}
         seq = re.compile(r'[A-Za-z ]+[A-Za-z, ]+')
-        api = 'http://www.jstor.org/action/doBasicSearch?Query={0}&Search=Search&gw=jtx&prq=topic+identifier&hp=50&acc=off&aori=off&wc=on&fc=off'
+        api = 'http://www.jstor.org/action/doBasicSearch?Query={0}&Search=Search&gw=jtx&prq=topic+identifier&hp=100&acc=off&aori=off&wc=on&fc=off'
         br.open(api.format(topic))
         with_info = [i for i in br.links() if 'http://www.jstor.org/stable' in i.absolute_url]
         for link in with_info:
@@ -38,47 +42,77 @@ def get_topics_and_words(topics):
                 end = resp.find('</div>', _next+1)
                 text = resp[_next:end]
                 text = text[10:]
-                data["topic"][topic]["documents"].append(text)
+                #data["topic"][topic]["documents"].append(text)
+                topic_struct["documents"].append(text)
                 words_list = re.findall(seq, text)
                 if words_list != None and len(words_list) > 0:
                     words_list = words_list[0].split(' ')
                     for word in words_list:
                         if word != '':
                             word = word.lower()
-                            data["all_words"]["count"] += 1
-                            data["topic"][topic]["total_words"] += 1
+                            all_struct["all_words"]["count"] += 1
+                            #data["topic"][topic]["total_words"] += 1
+                            topic_struct["total_words"] += 1
                        
-                            if word not in data["all_words"]["words"].keys():
-                                data["all_words"]["words"][word] = {"number": 1, "topics": [topic]}
+                            #f word not in data["all_words"]["words"].keys():
+                            if word not in all_struct["all_words"]["words"].keys():
+                                # data["all_words"]["words"][word] = {"number": 1, "topics": [topic]}
+                                all_struct["all_words"]["words"][word] = {"number": 1}
                             else:
-                                data["all_words"]["words"][word]["number"] += 1
-                                if topic not in data["all_words"]["words"][word]["topics"]:
-                                    data["all_words"]["words"][word]["topics"].append(topic)
-                                else:
-                                    pass
-                            if word in data["topic"][topic]["words"].keys(): 
-                                data["topic"][topic]["words"][word]["number"] += 1
+                                # data["all_words"]["words"][word]["number"] += 1
+                                all_struct["all_words"]["words"][word]["number"] += 1
+                                #if topic not in data["all_words"]["words"][word]["topics"]:
+                                #    data["all_words"]["words"][word]["topics"].append(topic)
+                                #else:
+                                #    pass
+                            #if word in data["topic"][topic]["words"].keys(): 
+                            if word in topic_struct["words"].keys():
+                                #data["topic"][topic]["words"][word]["number"] += 1
+                                topic_struct["words"][word]["number"] += 1
                             else:
-                                data["topic"][topic]["words"][word] = {}
-                                data["topic"][topic]["words"][word]["number"] = 1
+                                topic_struct["words"][word] = {"number": 1}
+                                #data["topic"][topic]["words"][word] = {}
+                                #data["topic"][topic]["words"][word]["number"] = 1
             else:
                 pass
         
-    return data
+        f = open('topstructs/%s.txt' % topic, 'w')
+        f.write( json.dumps( topic_struct )  )
+        f.close()
+        print "%s data written" % topic 
+    f = open('all_struct.txt', 'w')
+    d = f.write( json.dumps(all_struct) )
+    f.close()
+    print "All topics finished and written"
 
+# will need to be passed the list of topics so it can iterate through and build statistics for each of these
 
-def get_probabilities(data):
-    for topic in data["topic"].keys():
-        total_for_topic = float(data["topic"][topic]["total_words"])
-        for word in data["topic"][topic]["words"]:
-            if "prob" not in data["topic"][topic]["words"][word].keys():
-                words_count = float(data["topic"][topic]["words"][word]["number"])
+def get_probabilities(topics_list):
+    #for topic in data["topic"].keys():
+    for topic in topics_list:
+        #total_for_topic = float(data["topic"][topic]["total_words"])
+        # read in the topic structure that we created from above
+        f = open('topstructs/%s.txt' % topic, 'r')
+        d = json.loads( f.read() )
+        f.close()
+        total_for_topic = float( d["total_words"] )
+        #for word in data["topic"][topic]["words"]:
+        for word in d["words"].keys():
+            #if "prob" not in data["topic"][topic]["words"][word].keys():
+            if "prob" not in d["words"][word].keys():
+                #words_count = float(data["topic"][topic]["words"][word]["number"])
+                words_count = float( d["words"][word]["number"] )
                 # total count of words
                 prob = words_count / total_for_topic 
-                data["topic"][topic]["words"][word]["prob"] = prob
+                #data["topic"][topic]["words"][word]["prob"] = prob
+                d["words"][word]["prob"] = prob
             else:
                 pass
-    return data
+    # rewrite the data to the file
+        f = open('topstructs/%s.txt' % topic, 'w')
+        f.write( json.dumps(d) )
+        f.close()
+        print "%s probabilities measured" % topic
     print "Probabilities for all words successfully weighed"
 
 
@@ -93,18 +127,26 @@ def get_probabilities(data):
 """
 
 
-def match_topic(data, string):
+def match_topic(topics_list, string):
     words = string.split()
+    words = [ ''.join([e.lower() for e in word if e.isalpha()]) for word in words ]
     stats = {}
+    # open the all struct
+    all_struct = json.loads( open('all_struct.txt', 'r').read() )
     # assign an equal probability for each topic for ubiquity of probabilities
-    pt = 1.0/float( len(data['topic'].keys()) )
-    for topic in data['topic'].keys():
+    #pt = 1.0/float( len(topics_list) )
+    #for topic in data['topic'].keys():
+    for topic in topics_list:
+        topic_data = json.loads( open('topstructs/%s.txt' % topic, 'r').read() )
         stats[topic] = pt
         # for each word P(T| w)
         for word in words:
-            if word in data['topic'][topic]['words'].keys():
-                stats[topic] *= data['topic'][topic]['words'][word]['prob']
+            #if word in data['topic'][topic]['words'].keys():
+            if word in topic_data["words"].keys():
+                #stats[topic] *= data['topic'][topic]['words'][word]['prob']
+                stats[topic] *= topic_data["words"][word]['prob']
             # otherwise we will have to assign a probability to that word
             else:
-                stats[topic] *= 1.0 / float(data['all_words']['count'])
+                #stats[topic] *= 1.0 / float(data['all_words']['count'])
+                stats[topic] *= 1.0 / float( all_struct['all_words']['count'] )
     return stats
