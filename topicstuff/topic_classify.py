@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#     else:
+                keep_going = False
+       !/usr/bin/env python
 import json
 import mechanize
 import re
@@ -25,64 +27,69 @@ def get_topics_and_words(topics):
     # use the words in here when calculating to find out the amount of times they have
     # appeared in the document vs how many times they appeared in total
     for topic in topics:
-        #data["topic"][topic] = {"words": {}, "documents": [], "total_words": 0}
-        topic_struct = {"words": {}, "documents": [], "total_words": 0}
-        #new_data = {"words": {}, "documents": [], "total_words": 0}
-        seq = re.compile(r'[A-Za-z ]+[A-Za-z, ]+')
-        api = 'http://www.jstor.org/action/doBasicSearch?Query={0}&Search=Search&gw=jtx&prq=topic+identifier&hp=100&acc=off&aori=off&wc=on&fc=off'
-        br.open(api.format(topic))
-        with_info = [i for i in br.links() if 'http://www.jstor.org/stable' in i.absolute_url]
-        for link in with_info:
+        try:
+            #data["topic"][topic] = {"words": {}, "documents": [], "total_words": 0}
+            topic_struct = {"words": {}, "documents": [], "total_words": 0}
+            #new_data = {"words": {}, "documents": [], "total_words": 0}
+            seq = re.compile(r'[A-Za-z ]+[A-Za-z, ]+')
+            api = 'http://www.jstor.org/action/doBasicSearch?Query={0}&Search=Search&gw=jtx&prq=topic+identifier&hp=100&acc=off&aori=off&wc=on&fc=off'
+            br.open(api.format(topic))
+            with_info = [i for i in br.links() if 'http://www.jstor.org/stable' in i.absolute_url]
+            for link in with_info:
         
-            br.follow_link(link)
-            resp = br.response().read()
-            if 'An abstract for this item is not available' not in resp:
-                start = resp.find('<div class="abstract">')
-                _next = resp.find('\n', resp.find('<p>', start+1)+1)
-                end = resp.find('</div>', _next+1)
-                text = resp[_next:end]
-                text = text[10:]
-                #data["topic"][topic]["documents"].append(text)
-                topic_struct["documents"].append(text)
-                words_list = re.findall(seq, text)
-                if words_list != None and len(words_list) > 0:
-                    words_list = words_list[0].split(' ')
-                    for word in words_list:
-                        if word != '':
-                            word = word.lower()
-                            all_struct["all_words"]["count"] += 1
-                            #data["topic"][topic]["total_words"] += 1
-                            topic_struct["total_words"] += 1
+                br.follow_link(link)
+                resp = br.response().read()
+                if 'An abstract for this item is not available' not in resp:
+                    start = resp.find('<div class="abstract">')
+                    _next = resp.find('\n', resp.find('<p>', start+1)+1)
+                    end = resp.find('</div>', _next+1)
+                    text = resp[_next:end]
+                    text = text[10:]
+                    #data["topic"][topic]["documents"].append(text)
+                    topic_struct["documents"].append(text)
+                    words_list = re.findall(seq, text)
+                    if words_list != None and len(words_list) > 0:
+                        words_list = words_list[0].split(' ')
+                        for word in words_list:
+                            if word != '':
+                                word = word.lower()
+                                all_struct["all_words"]["count"] += 1
+                                #data["topic"][topic]["total_words"] += 1
+                                topic_struct["total_words"] += 1
                        
-                            #f word not in data["all_words"]["words"].keys():
-                            if word not in all_struct["all_words"]["words"].keys():
-                                # data["all_words"]["words"][word] = {"number": 1, "topics": [topic]}
-                                all_struct["all_words"]["words"][word] = {"number": 1}
-                            else:
-                                # data["all_words"]["words"][word]["number"] += 1
-                                all_struct["all_words"]["words"][word]["number"] += 1
-                                #if topic not in data["all_words"]["words"][word]["topics"]:
-                                #    data["all_words"]["words"][word]["topics"].append(topic)
-                                #else:
-                                #    pass
-                            #if word in data["topic"][topic]["words"].keys(): 
-                            if word in topic_struct["words"].keys():
-                                #data["topic"][topic]["words"][word]["number"] += 1
-                                topic_struct["words"][word]["number"] += 1
-                            else:
-                                topic_struct["words"][word] = {"number": 1}
-                                #data["topic"][topic]["words"][word] = {}
-                                #data["topic"][topic]["words"][word]["number"] = 1
-            else:
-                pass
+                                #f word not in data["all_words"]["words"].keys():
+                                if word not in all_struct["all_words"]["words"].keys():
+                                    # data["all_words"]["words"][word] = {"number": 1, "topics": [topic]}
+                                    all_struct["all_words"]["words"][word] = {"number": 1}
+                                else:
+                                    # data["all_words"]["words"][word]["number"] += 1
+                                    all_struct["all_words"]["words"][word]["number"] += 1
+                                    #if topic not in data["all_words"]["words"][word]["topics"]:
+                                    #    data["all_words"]["words"][word]["topics"].append(topic)
+                                    #else:
+                                    #    pass
+                                #if word in data["topic"][topic]["words"].keys(): 
+                                if word in topic_struct["words"].keys():
+                                    #data["topic"][topic]["words"][word]["number"] += 1
+                                    topic_struct["words"][word]["number"] += 1
+                                else:
+                                    topic_struct["words"][word] = {"number": 1}
+                                    #data["topic"][topic]["words"][word] = {}
+                                    #data["topic"][topic]["words"][word]["number"] = 1
+                else:
+                    pass
+            f = open('/home/wes/Documents/projects/topic_classifier/topicstuff/topstructs/%s.txt' % topic, 'w')
+            f.write( json.dumps( topic_struct )  )
+            f.close()
+        except:
+            f = open('/home/wes/Documents/projects/topic_classifier/topicstuff/failed.txt', 'a')
+            f.seek(0, os.SEEK_END)
+            f.write('%s' % topic)
+            f.close()
         
-        f = open('topstructs/%s.txt' % topic, 'w')
-        f.write( json.dumps( topic_struct )  )
-        f.close()
-        print "%s data written" % topic 
-    f = open('all_struct.txt', 'w')
-    d = f.write( json.dumps(all_struct) )
-    f.close()
+    ff = open('all_struct.txt', 'w')
+    d = ff.write( json.dumps(all_struct) )
+    ff.close()
     print "All topics finished and written"
 
 # will need to be passed the list of topics so it can iterate through and build statistics for each of these
@@ -92,7 +99,7 @@ def get_probabilities(topics_list):
     for topic in topics_list:
         #total_for_topic = float(data["topic"][topic]["total_words"])
         # read in the topic structure that we created from above
-        f = open('topstructs/%s.txt' % topic, 'r')
+        f = open('/home/wes/Documents/projects/topic_classifier/topicstuff/topstructs/%s.txt' % topic, 'r')
         d = json.loads( f.read() )
         f.close()
         total_for_topic = float( d["total_words"] )
