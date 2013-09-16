@@ -6,21 +6,22 @@ import cookielib
 
 # will need to be passed the list of topics so it can iterate through and build statistics for each of these
 def get_probabilities(topics_list):
+    _all = json.loads( open('/home/wes/Documents/projects/topic_classifier/topicstuff/all_struct.txt', 'r').read() )
+    total_count = float(_all['all_words']['count'])      
     for topic in topics_list:
         try:
             f = open('/home/wes/Documents/projects/topic_classifier/topicstuff/topstructs/%s.txt' % topic, 'r')
             d = json.loads( f.read() )
             f.close()
-            _all = json.loads( open('/home/wes/Documents/projects/topic_classifier/topicstuff/all_struct.txt', 'r').read() )
-            total_count = float(_all['all_words']['count'])
             for word in d["words"].keys():
+                documents_in = float( len([ topic for topic in topics_list if word in json.loads(open('/home/wes/Documents/projects/topic_classifier/topicstuff/topstructs/%s.txt' % topic, 'r').read())['words'].keys() ] ) )
                 if "prob" not in d["words"][word].keys():
                     words_count = float( d["words"][word]["number"] )
                     # total count of words
-                    prob = words_count / total_count 
+                    prob = words_count / total_count / documents_in
                     d["words"][word]["prob"] = prob
                 else:
-                    pass
+                    d["words"][word]["prob"] *= 2
             # rewrite the data to the file
             f = open('/home/wes/Documents/projects/topic_classifier/topicstuff/topstructs/%s.txt' % topic, 'w')
             f.write( json.dumps(d) )
@@ -28,6 +29,7 @@ def get_probabilities(topics_list):
             print "%s probabilities measured" % topic
         except IOError:
             print "%s failed" % topic
+            topics_list.remove(topics_list.index(topic))
     print "Probabilities for all words successfully weighed"
 
 
@@ -44,7 +46,8 @@ def get_probabilities(topics_list):
 
 def match_topic(topics_list, string):
     words = string.split()
-    words = [ ''.join([e.lower() for e in word if e.isalpha()]) for word in words ]
+    seq = re.compile(r'[A-Za-z]+')
+    words = [ re.findall(seq, word)[0].lower() for word in words ]
     stats = {}
     # open the all struct
     all_struct = json.loads( open('/home/wes/Documents/projects/topic_classifier/topicstuff/all_struct.txt', 'r').read() )
@@ -63,6 +66,7 @@ def match_topic(topics_list, string):
                 # containing the word once
                 else:
                     stats[topic] *= 0.1 / float( all_struct['all_words']['count'] )
+                   
         except IOError:
             pass
         
