@@ -1,4 +1,4 @@
-<b>A topic classifier</b><br><br><br>
+<b><h2>A topic classifier</h2></b><br><br><br>
 
 <b>Approach:</b><br>
   - mined 337 topics
