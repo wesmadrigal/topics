@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from topic_classify import get_topics_and_words2
+from topic_classify import get_topics_and_words
 import json
 import os
 import mechanize, cookielib

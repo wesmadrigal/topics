@@ -14,14 +14,13 @@ def get_probabilities(topics_list):
             d = json.loads( f.read() )
             f.close()
             for word in d["words"].keys():
-                documents_in = float( len([ topic for topic in topics_list if word in json.loads(open('/home/wes/Documents/projects/topic_classifier/topicstuff/topstructs/%s.txt' % topic, 'r').read())['words'].keys() ] ) )
                 if "prob" not in d["words"][word].keys():
                     words_count = float( d["words"][word]["number"] )
                     # total count of words
-                    prob = words_count / total_count / documents_in
-                    d["words"][word]["prob"] = prob
+                    total_probability = words_count / float(_all['all_words']['words'][word]['number'])     
+                    d["words"][word]["prob"] = total_probability
                 else:
-                    d["words"][word]["prob"] *= 2
+                    pass
             # rewrite the data to the file
             f = open('/home/wes/Documents/projects/topic_classifier/topicstuff/topstructs/%s.txt' % topic, 'w')
             f.write( json.dumps(d) )
@@ -65,7 +64,7 @@ def match_topic(topics_list, string):
                 # of course insuring that the value of said word is lower than even topics
                 # containing the word once
                 else:
-                    stats[topic] *= 0.1 / float( all_struct['all_words']['count'] )
+                    stats[topic] *= 1.0 / float(all_struct['all_words']['count']) 
                    
         except IOError:
             pass
@@ -98,7 +97,7 @@ cj = cookielib.LWPCookieJar()
 br.set_cookiejar(cj)
 
 
-def get_topics_and_words2(topic, dont_crawl, br):
+def get_topics_and_words(topic, dont_crawl, br):
     try:
         all_struct = json.loads( open('all_struct.txt', 'r').read() )
     except IOError:
